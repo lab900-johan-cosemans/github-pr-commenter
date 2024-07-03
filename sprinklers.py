@@ -33,6 +33,7 @@ def convertState(state):
     return state == 'on'
 
 @service
-def set_relay(relay=None, state=None):
-    log.info("Setting relay " + relay + " to " + state)
+def set_relay(relay: int=None, state: int=None):
+    log.info("Setting relay " + str(relay) + " to " + str(state))
     url = f'http://{ESP32_SPRINKLERS_IP}/?Rly{relay}={state}'
+    statusResponseXml = task.executor(requests.get, url)
