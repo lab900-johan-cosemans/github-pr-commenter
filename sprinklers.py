@@ -1,7 +1,8 @@
 import os
 import xmltodict
 
-ESP32_SPRINKLERS_IP = os.environ["ESP32_SPRINKLERS_IP"]
+#ESP32_SPRINKLERS_IP = os.environ["ESP32_SPRINKLERS_IP"]
+ESP32_SPRINKLERS_IP = "10.10.0.185"
 
 @time_trigger('period(now, 5s)')
 def log_hello_world():
