@@ -1,8 +1,16 @@
 import os
+import xmltodict
+
+ESP32_SPRINKLERS_IP = os.environ["ESP32_SPRINKLERS_IP"]
 
 @time_trigger('period(now, 5s)')
 def log_hello_world():
-    log.info("Hello World")
+    log.info("Getting status of the sprinklers on ip " + ESP32_SPRINKLERS_IP)
+    url = f'http://{ESP32_SPRINKLERS_IP}/status.xml'
+    statusResponseXml = task.executor(requests.get, url)
+    statusResponse = xmltodict.parse(statusResponseXml.text)
+    log.info(statusResponse)
+
 
 
 @service
