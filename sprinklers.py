@@ -6,7 +6,7 @@ import xmltodict
 ESP32_SPRINKLERS_IP = "10.10.0.185"
 
 @time_trigger('period(now, 5s)')
-def log_hello_world():
+def update_sprinkler_status():
     log.info("Getting status of the sprinklers on ip " + ESP32_SPRINKLERS_IP)
     url = f'http://{ESP32_SPRINKLERS_IP}/status.xml'
     statusResponseXml = task.executor(requests.get, url)
@@ -33,5 +33,6 @@ def convertState(state):
     return state == 'on'
 
 @service
-def log_hello_world2():
-    log.info("Hello World2")
+def set_relay(relay, state):
+    log.info("Setting relay " + relay + " to " + state)
+    url = f'http://{ESP32_SPRINKLERS_IP}/?Rly{relay}={state}'
