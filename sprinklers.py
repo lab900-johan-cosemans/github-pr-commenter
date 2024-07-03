@@ -5,7 +5,7 @@ import xmltodict
 #ESP32_SPRINKLERS_IP = os.environ["ESP32_SPRINKLERS_IP"]
 ESP32_SPRINKLERS_IP = "10.10.0.185"
 
-#@time_trigger('period(now, 5s)')
+@time_trigger('period(now, 5s)')
 def update_sprinkler_status():
     log.info("Getting status of the sprinklers on ip " + ESP32_SPRINKLERS_IP)
     url = f'http://{ESP32_SPRINKLERS_IP}/status.xml'
