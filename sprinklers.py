@@ -19,8 +19,8 @@ def set_relay(relay: int=None, state: int=None):
     statusResponseXml = task.executor(requests.get, url)
     setStateFromResponse(statusResponseXml.text)
 
-    def convertState(state):
-        return state == 'on'
+def convertState(state):
+    return state == 'on'
 
 # <?xml version="1.0" encoding="UTF-8"?>
 # <ESP32LR42DATA>
