@@ -45,14 +45,11 @@ def parse_diff(diff_text):
     Parses the diff and assigns positions correctly, adding line numbers to each chunk.
     """
     diff_lines = diff_text.split('\n')
-    file_comments = []
-    current_file = None
     position = 0
     processed_diff = []
 
     for line in diff_lines:
         if line.startswith("diff --git"):
-            current_file = line.split(" ")[-1]  # Extract file name
             position = 0  # Reset position for a new file
         elif line.startswith("@@"):
             position = 0  # Reset position at the start of a new hunk
