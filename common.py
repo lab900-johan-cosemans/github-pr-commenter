@@ -1,8 +1,6 @@
 import os
 import requests
 import json
-import argparse
-import google.generativeai as genai
 
 
 def log_request_response(method, url, headers, data=None):
@@ -29,6 +27,68 @@ def get_pr_diff(repo, pr_number, github_token):
 
     print("PR diff fetched successfully")
     return response.text
+
+
+def get_pr_files(repo, pr_number, github_token):
+    print(f"Fetching PR files for {repo} PR #{pr_number}")
+    url = f"https://api.github.com/repos/{repo}/pulls/{pr_number}/files"
+    headers = {"Authorization": f"token {github_token}", "Accept": "application/vnd.github.v3+json"}
+    log_request_response("GET", url, headers)
+    response = requests.get(url, headers=headers)
+    log_response(response)
+    return response.json() if response.status_code == 200 else None
+
+
+def get_pr_base_commit(repo, pr_number, github_token):
+    """Fetches the base commit SHA for the PR."""
+    print(f"Fetching base commit SHA for PR #{pr_number}")
+    url = f"https://api.github.com/repos/{repo}/pulls/{pr_number}"
+    headers = {"Authorization": f"token {github_token}", "Accept": "application/vnd.github.v3+json"}
+    log_request_response("GET", url, headers)
+    response = requests.get(url, headers=headers)
+    log_response(response)
+    if response.status_code == 200:
+        return response.json().get("base", {}).get("sha")
+    return None
+
+
+def get_file_content(repo, file_path, ref, github_token):
+    """Fetches the content of a file from the repository at the given ref (commit SHA, branch, or tag)."""
+    print(f"Fetching content for file: {file_path} at ref: {ref}")
+    url = f"https://api.github.com/repos/{repo}/contents/{file_path}?ref={ref}"
+    headers = {"Authorization": f"token {github_token}", "Accept": "application/vnd.github.v3.raw"}
+    log_request_response("GET", url, headers)
+    response = requests.get(url, headers=headers)
+    log_response(response)
+    return response.text if response.status_code == 200 else None
+
+
+def get_original_files_content(repo, pr_number, github_token):
+    """
+    Fetches the original content of all files in a PR and concatenates them into a string.
+    """
+    print(f"Fetching original file contents for {repo} PR #{pr_number}")
+    base_commit_sha = get_pr_base_commit(repo, pr_number, github_token)
+    if not base_commit_sha:
+        print("Failed to fetch base commit SHA.")
+        return ""
+
+    files = get_pr_files(repo, pr_number, github_token)
+    if not files:
+        return ""
+
+    content_str = ""
+    for file in files:
+        file_path = file.get("filename")
+
+        if file_path:
+            file_content = get_file_content(repo, file_path, base_commit_sha, github_token)
+            if file_content:
+                content_str += f"\n\n--- FILE: {file_path} ---\n\n" + file_content
+            else:
+                print(f"Failed to fetch content for {file_path}")
+
+    return content_str
 
 
 def read_best_practices(file_path):
@@ -62,28 +122,6 @@ def parse_diff(diff_text):
     print("Parsed diff:")
     print(parsed_diff_string)
     return parsed_diff_string
-
-
-def get_pr_diff(repo, pr_number, github_token):
-    print(f"Fetching PR diff for {repo}#{pr_number}")
-    url = f"https://api.github.com/repos/{repo}/pulls/{pr_number}"
-    headers = {
-        "Authorization": f"token {github_token}",
-        "Accept": "application/vnd.github.v3.diff"
-    }
-    log_request_response("GET", url, headers)
-    response = requests.get(url, headers=headers)
-    log_response(response)
-    if response.status_code != 200:
-        raise Exception(f"Failed to fetch diff: {response.status_code}")
-    return response.text
-
-
-def generate_review_comments(diff):
-    model = genai.GenerativeModel("gemini-pro")
-    prompt = f"Analyze the following GitHub pull request diff and provide a constructive review with comments:\n{diff}"
-    response = model.generate_content(prompt)
-    return response.text if response else "No response from Gemini."
 
 
 def post_github_comment(repo, pr_number, github_token, comment):

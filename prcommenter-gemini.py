@@ -1,35 +1,28 @@
 import os
-import requests
 import json
 import argparse
 import google.generativeai as genai
 
-from common import get_pr_diff, parse_diff, read_best_practices, post_github_comment, post_line_comments
+from common import get_original_files_content, get_pr_diff, parse_diff, read_best_practices, post_github_comment, post_line_comments
 
 
-def generate_review(diff, best_practices):
+def generate_review(diff, pr_file_string, best_practices):
     # list all models and log them
 #    print("Available models:")
 #    for model in genai.list_models():
 #        print(model)
 
-
     model = genai.GenerativeModel("gemini-2.0-pro-exp")
 
     print("Generating review from gemini...")
     prompt = f"""
-You are a Java expert reviewing a GitHub pull request from a colleague. Below is the PR diff, with each line prefixed by a number in square brackets (`[]`):
+### Context:
+You are a Java expert reviewing a GitHub pull request from a colleague. Below is the following:
+1. Between the `----DIFF START----` and `----DIFF END----` lines, you will find the diff of the pull request, with each line prefixed by a number in square brackets (`[]`):
+2. Between the `----SOURCEFILESSTART----` and `----SOURCEFILESEND----` lines, you will find the content of the source files in the pull request.
+3. Between the `----CODINGPRACTICES----` and `----CODINGPRACTICES----` lines, you will find the best practices for our developers.
 
-------
-{diff}
-------
-
-### Coding Best Practices:
-------
-{best_practices}
-------
-
-### Instructions:
+### Goal:
 Provide a **structured JSON response** with:
 
 - **"general_summary"** (string): A **concise, markdown-styled summary** of the most important changes. Keep it **short, structured, and easy to read**, using bullets if necessary.
@@ -42,9 +35,24 @@ Provide a **structured JSON response** with:
     - Code diffs/snippets when necessary
     - A friendly tone (smilies welcome! 😊)
 
-#### Important:
 - **Only provide the best comments**—if unsure, do **not** comment.
 - The **only** output should be the structured **JSON response**.
+
+----DIFF START----
+{diff}
+----DIFF END----
+
+
+----SOURCEFILESSTART----
+{pr_file_string}
+----SOURCEFILESEND----
+
+
+----CODINGPRACTICES----
+{best_practices}
+----CODINGPRACTICES----
+
+
     """
     response = model.generate_content(prompt)
 
@@ -80,16 +88,18 @@ def main():
     if not github_token:
         raise Exception("GitHub API token not found. Please set the GITHUB_API_TOKEN environment variable.")
 
+    print("Fetching PR diff...")
+    pr_file_string = get_original_files_content(args.repo, args.pr, github_token)
     diff = get_pr_diff(args.repo, args.pr, github_token)
     parsed_diff = parse_diff(diff)
     best_practices = read_best_practices(args.best_practices)
-    review = generate_review(parsed_diff, best_practices)
+    review = generate_review(parsed_diff, pr_file_string, best_practices)
 
     print("--- Review Output ---")
     print(json.dumps(review, indent=2))
 
-    post_github_comment(args.repo, args.pr, github_token, review["general_summary"])
-    post_line_comments(args.repo, args.pr, github_token, review["line_comments"])
+    # post_github_comment(args.repo, args.pr, github_token, review["general_summary"])
+    # post_line_comments(args.repo, args.pr, github_token, review["line_comments"])
 
     print("PR review process completed successfully.")
 

@@ -1,0 +1,46 @@
+These guidelines define best practices for writing maintainable, secure, and efficient code in the STiP and CHiP projects.
+
+#### **General Best Practices**
+- Keep business logic close to the relevant entity.
+- Use `@PreAuthorize` for authorization control whenever possible.
+- Fetch data using pagination to avoid memory overhead.
+- Avoid native queries unless absolutely necessary.
+- Use consistent and descriptive names for variables, methods, and classes.
+- Prefer built-in utility classes instead of external dependencies.
+- Maintain a single approach to entity creation.
+- Use setters to modify object attributes, even within the object itself.
+- Design synced entities with event-driven, idempotent logic.
+- Use `Optional` where applicable instead of relying on `null`.
+- Keep transactions small to reduce performance bottlenecks.
+- Create test data using SQL inserts rather than API calls.
+- Prefix embeddable override columns with their attribute name.
+- Avoid hardcoding entity values in main services.
+- Contribute to and reuse common libraries.
+- Ensure audit logging is correctly implemented.
+- Store quantities with their respective units.
+- Keep JPA repositories package-private.
+- Adhere to REST API best practices.
+- Do not assume ordering of messages when using `@JmsListener`.
+
+#### **Code Style and Design Principles**
+- Use `@PreAuthorize` at the controller level instead of inline permission checks.
+- Publish events instead of embedding logic inside service methods.
+- Avoid fetching entire datasets; use streaming or pagination instead.
+- Minimize transaction scope to prevent unnecessary database locks.
+- Do not store domain logic inside controllers.
+- Use database-specific functions only if they cannot be handled by Hibernate.
+- Ensure domain objects contain business logic instead of services.
+
+#### **Testing and Data Management**
+- Use SQL scripts to seed test data rather than API requests.
+- Define test data constants in a dedicated class for reuse.
+- Use database transactions in batch processing to minimize lock duration.
+- Ensure integration tests do not add unnecessary overhead.
+
+#### **Security and Maintainability**
+- Avoid passing `Optional` as a method parameter; prefer `@Nullable`.
+- Ensure that cascading changes are tracked in audit logs.
+- Store measurements with both values and units for clarity.
+- Use dependency injection correctly and respect module boundaries.
+- Ensure service interactions do not create cyclic dependencies.
+
