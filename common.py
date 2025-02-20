@@ -1,14 +1,49 @@
 import os
+from enum import Enum
+
 import requests
 import json
 import re
 
-bot_prefix="[Beep beep] 🤖 [Lab900-bot]\n"
+from pydantic import BaseModel
+
+bot_prefix="🤖 [LabGpt] 🤖\n"
+
+class PrCommentCategory(Enum):
+    BUG = ("bug", "🐛")
+    BEST_PRACTICE = ("best_practice", "✅")
+    INCONSISTENCY = ("inconsistency", "⚠️")
+    SECURITY_ISSUE = ("security_issue", "🔒")
+    PERFORMANCE_ISSUE = ("performance_issue", "⏱️")
+    NITPICKING = ("nitpicking", "🔍")
+    AUDITING = ("auditing", "🕵️")
+    OTHER = ("other", "ℹ️")
+
+    def __init__(self, value, emoji):
+        self._value_ = value
+        self.emoji = emoji
+
+    @classmethod
+    def from_string(cls, value: str):
+        """
+        Convert a string to a PrCommentCategory Enum, case-insensitive
+        """
+        value = value.lower()
+        for member in cls:
+            if member.value == value:
+                return member
+        raise ValueError(f"No matching enum found for value {value}")
+
+class PrComments(BaseModel):
+    file: str
+    line_number: int
+    comment: str
+    category: PrCommentCategory
+
 
 def log_request_response(method, url, headers, data=None):
     print(
         f"\n--- HTTP REQUEST ---\nMethod: {method}\nURL: {url}\nHeaders: {json.dumps(headers, indent=2)}\nData: {json.dumps(data, indent=2) if data else 'None'}\n")
-
 
 def log_response(response):
     print(f"\n--- HTTP RESPONSE ---\nStatus Code: {response.status_code}\nResponse Body: {response.text}\n")
@@ -176,7 +211,7 @@ def post_line_comments(repo, pr_number, github_token, line_comments):
     for comment in line_comments:
         print(f"Posting comment on {comment['file']} line {comment['line_number']}")
         data = {
-            "body": f"{bot_prefix}{comment["comment"]}",
+            "body": f"{bot_prefix}{PrCommentCategory.from_string(comment["category"]).emoji} {comment["comment"]}",
             "commit_id": latest_commit_sha,
             "path": comment["file"],
             "line": int(comment["line_number"])
