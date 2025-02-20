@@ -1,7 +1,9 @@
 import os
 import requests
 import json
+import re
 
+bot_prefix="[Beep beep] 🤖 [Lab900-bot]\n"
 
 def log_request_response(method, url, headers, data=None):
     print(
@@ -105,30 +107,44 @@ def parse_diff(diff_text):
     Parses the diff and assigns positions correctly, adding line numbers to each chunk.
     """
     diff_lines = diff_text.split('\n')
-    position = 0
+    old_position = 0
+    new_position = 0
     processed_diff = []
 
     for line in diff_lines:
         if line.startswith("diff --git"):
-            position = 0  # Reset position for a new file
+            old_position = 0  # Reset position for a new file
+            new_position = 0  # Reset position for a new file
         elif line.startswith("@@"):
-            position = 0  # Reset position at the start of a new hunk
+            match = re.search(r"-(\d+).*\+(\d+)", line)  # Find a number after "-" and before ","
+            old_position = int(match.group(1))-1
+            new_position = int(match.group(2))-1
+        elif line.startswith("-"):
+            old_position += 1
+        elif line.startswith("+"):
+            new_position += 1
         else:
-            position += 1  # Count lines relative to the last @@
+            old_position += 1
+            new_position += 1
 
-        processed_diff.append(f"[{position}] {line}")
+        if line.startswith("+"):
+            processed_diff.append(f"[{new_position}] {line}")
+        elif line.startswith("-"):
+            processed_diff.append(f"[{old_position}] {line}")
+        else:
+            processed_diff.append(f"[{new_position}] {line}")
+
 
     parsed_diff_string = '\n'.join(processed_diff)
     print("Parsed diff:")
     print(parsed_diff_string)
     return parsed_diff_string
 
-
 def post_github_comment(repo, pr_number, github_token, comment):
     print("Posting general review comment...")
     url = f"https://api.github.com/repos/{repo}/issues/{pr_number}/comments"
     headers = {"Authorization": f"token {github_token}", "Accept": "application/vnd.github.v3+json"}
-    data = {"body": str(comment)}
+    data = {"body": f"{bot_prefix}{str(comment)}"}
     response = requests.post(url, json=data, headers=headers)
     log_response(response)
     if response.status_code != 201:
@@ -160,11 +176,10 @@ def post_line_comments(repo, pr_number, github_token, line_comments):
     for comment in line_comments:
         print(f"Posting comment on {comment['file']} line {comment['line_number']}")
         data = {
-            "body": comment["comment"],
+            "body": f"{bot_prefix}{comment["comment"]}",
             "commit_id": latest_commit_sha,
             "path": comment["file"],
-            "position": int(comment["line_number"]),
-            "subject_type": "line"
+            "line": int(comment["line_number"])
         }
         log_request_response("POST", url, headers, data)
         response = requests.post(url, json=data, headers=headers)
